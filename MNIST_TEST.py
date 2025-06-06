@@ -4,6 +4,10 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+import random
+plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # macOS 中文支持
+plt.rcParams['axes.unicode_minus'] = False
 
 # 2. 选择设备，设置设备 检查当前 PyTorch 是否能使用 GPU（NVIDIA CUDA）。如果可以用 GPU，就设置为 "cuda"，否则就用 CPU。
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,12 +64,34 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #就像学生做错题，loss 是老师打的分，optimizer.step() 就是学生改错的动作。
 #学习率（learning rate）lr=0.001，控制“每次更新的步子多大”，0.001 是 Adam 的常用默认值
 
-# 9.训练函数
+# 9.训练函数 model 是你要训练的神经网络/loader 是训练数据加载器（DataLoader），每次提供一批图像和标签
+def train(model, loader, epochs): #epochs 是训练多少轮（遍历几次训练集
+    model.train() #把模型设置为“训练模式”，这句告诉 PyTorch：“我要开始训练了”
+    for epoch in range(epochs):
+        running_loss = 0.0
+        for images, labels in loader: # 从 DataLoader 中一批一批地取数据。
+            #images：一个形状为 [batch_size, 1, 16, 16] 的张量，labels：对应的真实数字标签（如 [0, 2, 5, 7, ...]）
+            images, labels = images.to(device), labels.to(device)
+
+            optimizer.zero_grad() #清空模型上次计算的梯度，如果不清除，上次的梯度会累加进来，导致模型参数更新错乱。
+            outputs = model(images) #前向传播：把输入图像送进模型，得到预测输出（logits）
+            # 比如返回的形状是 [64, 10]，表示每张图对 10 个类别的打分。例子中64代表64张图
+            loss = criterion(outputs, labels) #损失函数:模型“预测结果”与“真实标签”之间的差距
+            loss.backward() #这些梯度告诉优化器该如何更新模型，使 loss 更小。
+            optimizer.step() #优化器根据刚才的梯度，更新模型参数。
+
+            running_loss += loss.item() #把这一批的 loss 累加起来，准备计算整轮的平均损失。.item() 是把张量变成普通数值。
+        print(f"Epoch {epoch+1}: Loss = {running_loss/len(loader):.4f}")
+# 打印这一轮训练的平均 loss，保留 4 位小数。len(loader) 是有多少批次，running_loss / len(loader) 就是每轮平均损失。
+'''
 def train(model, loader, epochs):
     model.train()
     for epoch in range(epochs):
         running_loss = 0.0
-        for images, labels in loader:
+        correct = 0
+        total = 0
+
+        for i, (images, labels) in enumerate(loader):
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
@@ -75,18 +101,39 @@ def train(model, loader, epochs):
             optimizer.step()
 
             running_loss += loss.item()
-        print(f"Epoch {epoch+1}: Loss = {running_loss/len(loader):.4f}")
 
+            # 准确率统计
+            _, predicted = torch.max(outputs, 1)
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+
+            # ✅ 每个 epoch 的第一个 batch 可视化一张图像 + 模型预测
+            if i == 0:
+                idx = random.randint(0, images.size(0) - 1)  # 随机选一张图
+                img = images[idx].cpu().squeeze().numpy()
+                true_label = labels[idx].item()
+                pred_label = predicted[idx].item()
+
+                plt.imshow(img, cmap='gray')
+                plt.axis('off')
+                plt.show()
+                print(f"✅ 可视化样本：预测 = {pred_label}，真实 = {true_label}")
+
+        avg_loss = running_loss / len(loader)
+        acc = 100 * correct / total
+        print(f"Epoch {epoch+1}: Loss = {avg_loss:.4f}, Accuracy = {acc:.2f}%")
+'''
 # 10.测试函数
-def test(model, loader):
-    model.eval()
+def test(model, loader): #model 是你训练好的神经网络，loader 是测试数据集的 DataLoader（一次送入很多张图像）
+    model.eval() #把模型设置为“评估模式”，和训练时的 .train() 相对
     correct = 0
     total = 0
-    with torch.no_grad():
+    with torch.no_grad(): #在这个区域里不要计算梯度。
         for images, labels in loader:
             images, labels = images.to(device), labels.to(device)
-            outputs = model(images)
-            _, predicted = torch.max(outputs, 1)
+            outputs = model(images) #前向传播，把图片喂进神经网络，每张图片属于 10 个数字的“打分”（logits）
+            #形状是 [batch_size, 10]，每一行表示一张图对每个数字的信心。
+            _, predicted = torch.max(outputs, 1) #只关心第二个结果（预测类别），不需要最大值本身，就用 _ 表示“忽略这个值”。
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     print(f"Test Accuracy: {100 * correct / total:.2f}%")
