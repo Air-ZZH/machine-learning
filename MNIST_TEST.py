@@ -4,7 +4,7 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt #python自带画图软件
 import random
 plt.rcParams['font.sans-serif'] = ['Arial Unicode MS']  # macOS 中文支持
 plt.rcParams['axes.unicode_minus'] = False
@@ -12,11 +12,11 @@ plt.rcParams['axes.unicode_minus'] = False
 # 2. 选择设备，设置设备 检查当前 PyTorch 是否能使用 GPU（NVIDIA CUDA）。如果可以用 GPU，就设置为 "cuda"，否则就用 CPU。
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-#3.图像预处理
-transform = transforms.Compose([ # -->  把图片转为 Tensor
-    transforms.ToTensor(), #PyTorch 的张量（Tensor），缩放到 0 ~ 1（除以 255）
+#3.图像预处理 数据！！！
+transform = transforms.Compose([ # -->  把图片转为 Tensor  矢量/向量vector（二维) 标量scale(一维)
+    transforms.ToTensor(), #PyTorch 的张量（Tensor），缩放到 0 ~ 1（除以 255） Tensor #属性shape dtype strides
     transforms.Normalize((0.5,), (0.5,)) #进一步变为 -1 ~ 1（常见做法）
-])
+])  #例如 百分制和五分制的衡量，拉到一个尺度去衡量 OR 80到100分，40-60分，由于卷子比较难，去比较也需要normalize
 
 #4.加载 USPS 数据集
 train_dataset = torchvision.datasets.USPS(
@@ -24,7 +24,7 @@ train_dataset = torchvision.datasets.USPS(
 test_dataset = torchvision.datasets.USPS(
     root='./data', train=False, transform=transform, download=True)# transform 是刚才定义好的那三行
 
-# 5. 打包数据成 DataLoader，batch_size=64 --> 每次从数据集中取出 64 张图片作为一个 mini-batch 训练模型
+# 5. 打包数据成 DataLoader，batch_size=64 --> 每次从数据集中取出 64 张图片作为一个 mini-batch 训练模型,越小bitch size，迭代次数越多
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True) #打乱顺序训练更鲁棒（建议训练时设为shuffle=True）
 test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
@@ -63,7 +63,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #给你的模型绑定一个“智能调参器”，它会在训练过程中根据每次的 loss 自动更新模型参数，让模型变得越来越聪明。
 #就像学生做错题，loss 是老师打的分，optimizer.step() 就是学生改错的动作。
 #学习率（learning rate）lr=0.001，控制“每次更新的步子多大”，0.001 是 Adam 的常用默认值
-
+'''
 # 9.训练函数 model 是你要训练的神经网络/loader 是训练数据加载器（DataLoader），每次提供一批图像和标签
 def train(model, loader, epochs): #epochs 是训练多少轮（遍历几次训练集
     model.train() #把模型设置为“训练模式”，这句告诉 PyTorch：“我要开始训练了”
@@ -76,7 +76,7 @@ def train(model, loader, epochs): #epochs 是训练多少轮（遍历几次训�
             optimizer.zero_grad() #清空模型上次计算的梯度，如果不清除，上次的梯度会累加进来，导致模型参数更新错乱。
             outputs = model(images) #前向传播：把输入图像送进模型，得到预测输出（logits）
             # 比如返回的形状是 [64, 10]，表示每张图对 10 个类别的打分。例子中64代表64张图
-            loss = criterion(outputs, labels) #损失函数:模型“预测结果”与“真实标签”之间的差距
+            loss = criterion(outputs, labels) #损失函数:模型“预测结果”与“真实标签”之间的差距 一切我想优化的东西都写在loss，minimize这个loss
             loss.backward() #这些梯度告诉优化器该如何更新模型，使 loss 更小。
             optimizer.step() #优化器根据刚才的梯度，更新模型参数。
 
@@ -122,7 +122,7 @@ def train(model, loader, epochs):
         avg_loss = running_loss / len(loader)
         acc = 100 * correct / total
         print(f"Epoch {epoch+1}: Loss = {avg_loss:.4f}, Accuracy = {acc:.2f}%")
-'''
+
 # 10.测试函数
 def test(model, loader): #model 是你训练好的神经网络，loader 是测试数据集的 DataLoader（一次送入很多张图像）
     model.eval() #把模型设置为“评估模式”，和训练时的 .train() 相对
@@ -139,5 +139,5 @@ def test(model, loader): #model 是你训练好的神经网络，loader 是测�
     print(f"Test Accuracy: {100 * correct / total:.2f}%")
 
 # 跑通训练和测试
-train(model, train_loader, epochs=5)
+train(model, train_loader, epochs= 1)
 test(model, test_loader)
