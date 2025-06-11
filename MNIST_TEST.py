@@ -36,7 +36,10 @@ class SimpleNet(nn.Module):
         self.flatten = nn.Flatten() #输入从形状 [batch, 1, 16, 16] 变成 [batch, 256]，送入全连接层做分类
 # 添加了一个 “展平层”，它的作用是把多维的张量“拉平”成一维向量，[64, 1, 16, 16]  ← 这代表 64 张图片，每张是 1×16×16
 # Flatten 后，[64, 256]，每张图像的 1×16×16 = 256 个像素值被变成一个一维向量
-
+        '''
+        fc: fully connected ,nn --> neural network 的缩写，一个神经网络有一个layer fully connected
+        神经网络-->模拟人的神经的机制，激活的机制，截取一段比较敏感的信号，然后将其放大激活.ReLU() 
+        '''
         self.fc = nn.Sequential( #将多个神经网络层组合成一个整体结构
             nn.Linear(16*16, 128), #全连接层1（nn.Linear）的输入是一维向量，输出维度是 128，可以理解为有 128 个神经元
             nn.ReLU(), #激活函数 ReLU（Rectified Linear Unit）把“负数砍掉”的简单激活函数，帮神经网络保留有用信号、丢弃无用信息
@@ -52,7 +55,7 @@ class SimpleNet(nn.Module):
 # model = SimpleNet() → 实例化模型，此时模型还只存在于 CPU 的内存中 & model.to(device)→ 把模型搬到 GPU 或 CPU 上
 model = SimpleNet().to(device) # 如果你电脑有 GPU，就把模型搬到 GPU 上，否则就在 CPU 上运行
 
-#8. 损失函数 + 优化器
+#8. 损失函数 + 优化器. !.CrossEntropyLoss() !最常见
 criterion = nn.CrossEntropyLoss() # 损失函数（Loss Function）衡量“预测值”和“真实值”之间差距的函数，也就是分类错误的“惩罚”
 # 对 模型输出 logits（原始分数） 进行 自动 softmax（概率） →  自动计算交叉熵 →  输出 loss（损失值）
 # logits 是通过神经网络的前向传播一步步计算出来的，最终由最后一层 线性层（Linear） 输出
@@ -63,7 +66,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #给你的模型绑定一个“智能调参器”，它会在训练过程中根据每次的 loss 自动更新模型参数，让模型变得越来越聪明。
 #就像学生做错题，loss 是老师打的分，optimizer.step() 就是学生改错的动作。
 #学习率（learning rate）lr=0.001，控制“每次更新的步子多大”，0.001 是 Adam 的常用默认值
-'''
+
 # 9.训练函数 model 是你要训练的神经网络/loader 是训练数据加载器（DataLoader），每次提供一批图像和标签
 def train(model, loader, epochs): #epochs 是训练多少轮（遍历几次训练集
     model.train() #把模型设置为“训练模式”，这句告诉 PyTorch：“我要开始训练了”
@@ -122,7 +125,7 @@ def train(model, loader, epochs):
         avg_loss = running_loss / len(loader)
         acc = 100 * correct / total
         print(f"Epoch {epoch+1}: Loss = {avg_loss:.4f}, Accuracy = {acc:.2f}%")
-
+'''
 # 10.测试函数
 def test(model, loader): #model 是你训练好的神经网络，loader 是测试数据集的 DataLoader（一次送入很多张图像）
     model.eval() #把模型设置为“评估模式”，和训练时的 .train() 相对
@@ -134,10 +137,17 @@ def test(model, loader): #model 是你训练好的神经网络，loader 是测�
             outputs = model(images) #前向传播，把图片喂进神经网络，每张图片属于 10 个数字的“打分”（logits）
             #形状是 [batch_size, 10]，每一行表示一张图对每个数字的信心。
             _, predicted = torch.max(outputs, 1) #只关心第二个结果（预测类别），不需要最大值本身，就用 _ 表示“忽略这个值”。
+            print(predicted)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            correct += (predicted == labels).sum().item() # binary的TF变成0或者1 有一个T计一个1
     print(f"Test Accuracy: {100 * correct / total:.2f}%")
 
 # 跑通训练和测试
-train(model, train_loader, epochs= 1)
+train(model, train_loader, epochs= 5)
 test(model, test_loader)
+
+#demension = 0 的时候
+# .to(device) 特殊用法
+#建议打印139行看一看
+#140行就是求概率最大的 最有信心的值是什么
+#_, predicted == 前面那个是最大的值是多少，但是我不需要
